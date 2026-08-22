@@ -4,17 +4,13 @@ plugins {
 
 android {
     namespace = "ru.superplushkin.twofactorauthapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "ru.superplushkin.twofactorauthapp"
-        minSdk = 29
-        targetSdk = 36
+        minSdk = 24
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -34,6 +30,9 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = false
+        }
+        resources {
+            excludes += "**/dump_syms.bin" // там баг с 4kb библиотекой по отладке
         }
     }
 }

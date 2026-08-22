@@ -8,6 +8,7 @@
         <item name="colorOnPrimaryContainer">@color/text_medium_on_background_primary</item>
 
         <item name="android:forceDarkAllowed">false</item>
+        <item name="alertDialogTheme">@style/MyDialogTheme</item>
     </style>
 
     <!-- Стиль для Activity -->
@@ -143,7 +144,7 @@
     </style>
 
     <style name="LeftSlideDialogStyle" parent="ThemeOverlay.MaterialComponents.Dialog">
-        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowAnimationStyle">@style/LeftSlideDialogAnimation</item>
@@ -154,6 +155,32 @@
     <style name="LeftSlideDialogAnimation">
         <item name="android:windowEnterAnimation">@anim/slide_in_left</item>
         <item name="android:windowExitAnimation">@anim/slide_out_left</item>
+    </style>
+
+    <!-- Стиль для диалогов -->
+    <style name="MyDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog">
+        <!-- Фон диалога -->
+        <item name="android:windowBackground">@color/background_primary_hard</item>
+        <!-- Цвет заголовка и сообщения -->
+        <item name="android:textColorPrimary">@color/text_hard_on_background_primary</item>
+        <item name="android:textColor">@color/text_hard_on_background_primary</item>
+        <!-- Цвет кнопок (используем ваши стили) -->
+        <item name="buttonBarPositiveButtonStyle">@style/MyDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/MyDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/MyDialogButton</item>
+        <!-- Убираем стандартный акцентный цвет -->
+        <item name="colorPrimary">@color/text_hard_on_background_primary</item>
+        <item name="colorOnPrimary">@color/text_hard_on_background_primary</item>
+    </style>
+
+    <!-- Стиль кнопок диалога (использует ваш MyTheme.Button.Normal) -->
+    <style name="MyDialogButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/text_hard_on_background_primary</item>
+        <item name="rippleColor">@color/text_hard_on_background_primary</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingLeft">16dp</item>
     </style>
 
 </resources>

@@ -22,6 +22,7 @@ import ru.superplushkin.twofactorauthapp.model.SimpleService;
 import java.util.Collections;
 import java.util.List;
 
+
 public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdapter.ViewHolder> {
     private final List<SimpleService> services;
     private final MainActivity context;
@@ -80,8 +81,9 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
             services.remove(position);
             notifyItemRemoved(position);
 
-            if (position < services.size())
+            if (position < services.size()) {
                 notifyItemRangeChanged(position, services.size() - position);
+            }
         }
     }
     public void restoreService(SimpleService service) {
@@ -118,8 +120,9 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
             tvServiceName.setText(service.getServiceName());
 
             String accountOrIssuer = service.getAccount();
-            if (accountOrIssuer == null || accountOrIssuer.isEmpty())
+            if (accountOrIssuer == null || accountOrIssuer.isEmpty()) {
                 accountOrIssuer = "";
+            }
 
             tvAccount.setText(accountOrIssuer);
             tvAccount.setVisibility(!accountOrIssuer.isEmpty() ? View.VISIBLE : View.GONE);
@@ -134,8 +137,9 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
             });
 
             serviceContainer.setOnClickListener(v -> {
-                if (currentService != null)
+                if (currentService != null) {
                     context.navigateToServiceDetails(currentService.getId());
+                }
             });
         }
 
@@ -144,15 +148,15 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
                 ivFavorite.setImageResource(R.drawable.ic_star);
                 ivFavorite.setColorFilter(ContextCompat.getColor(context, R.color.favorite_star_background));
                 favoriteContainer.animate()
-                        .scaleX(1.1f)
-                        .scaleY(1.1f)
+                    .scaleX(1.1f)
+                    .scaleY(1.1f)
+                    .setDuration(150)
+                    .withEndAction(() -> favoriteContainer.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
                         .setDuration(150)
-                        .withEndAction(() -> favoriteContainer.animate()
-                                .scaleX(1.0f)
-                                .scaleY(1.0f)
-                                .setDuration(150)
-                                .start())
-                        .start();
+                        .start())
+                    .start();
             } else {
                 ivFavorite.setImageResource(R.drawable.ic_star_only_border);
                 ivFavorite.setColorFilter(ContextCompat.getColor(context, R.color.not_favorite_star_background));
@@ -180,9 +184,9 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
 
         @Override
         public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target) {
-
-            if (!isDragging && adapter.sortTypeChangeListener != null)
+            if (!isDragging && adapter.sortTypeChangeListener != null) {
                 adapter.sortTypeChangeListener.onSortTypeChangedToCustom();
+            }
 
             isDragging = true;
 
@@ -202,16 +206,18 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
         @Override
         public void onSelectedChanged(@Nullable RecyclerView.ViewHolder viewHolder, int actionState) {
             super.onSelectedChanged(viewHolder, actionState);
-            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null)
+            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
                 viewHolder.itemView.setAlpha(0.8f);
+            }
         }
 
         @Override
         public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
             super.clearView(recyclerView, viewHolder);
 
-            if (isDragging && adapter.sortTypeChangeListener != null)
+            if (isDragging && adapter.sortTypeChangeListener != null) {
                 adapter.sortTypeChangeListener.onItemOrderChanged(adapter.services);
+            }
 
             isDragging = false;
 
@@ -220,8 +226,9 @@ public class SimpleServiceAdapter extends RecyclerView.Adapter<SimpleServiceAdap
     }
 
     public void onItemMove(int fromPosition, int toPosition) {
-        if (fromPosition < 0 || fromPosition >= services.size() || toPosition < 0 || toPosition >= services.size())
+        if (fromPosition < 0 || fromPosition >= services.size() || toPosition < 0 || toPosition >= services.size()) {
             return;
+        }
 
         Collections.swap(services, fromPosition, toPosition);
         notifyItemMoved(fromPosition, toPosition);

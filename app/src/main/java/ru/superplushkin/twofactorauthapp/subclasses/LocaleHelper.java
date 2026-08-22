@@ -3,7 +3,6 @@ package ru.superplushkin.twofactorauthapp.subclasses;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 
 import java.util.Locale;
 
@@ -14,11 +13,10 @@ public class LocaleHelper {
     public static Context updateLocale(Context context) {
         String language = getCurrentLanguage(context);
 
-        Locale locale = language.equals("en") ? Locale.ENGLISH : new Locale("ru");
+        Locale locale = language.equals("en") ? Locale.ENGLISH : Locale.forLanguageTag("ru");
         Locale.setDefault(locale);
 
-        Resources resources = context.getResources();
-        Configuration config = resources.getConfiguration();
+        Configuration config = context.getResources().getConfiguration();
         config.setLocale(locale);
 
         return context.createConfigurationContext(config);

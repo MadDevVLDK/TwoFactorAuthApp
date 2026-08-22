@@ -17,6 +17,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
@@ -32,6 +34,7 @@ import ru.superplushkin.twofactorauthapp.R;
 import ru.superplushkin.twofactorauthapp.subclasses.SlidrConfigHelper;
 import ru.superplushkin.twofactorauthapp.subclasses.TOTPGenerator;
 import ru.superplushkin.twofactorauthapp.model.Service;
+import ru.superplushkin.twofactorauthapp.subclasses.TransitionHelper;
 
 public class ServiceDetailActivity extends MyActivity implements ServiceDetailsBottomSheet.OnServiceBottomSheetClickListener {
 
@@ -40,13 +43,14 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
 
     private TextView tvServiceName, tvAccount, tvCode;
     private ProgressBar progressBar;
-    private ImageView ivServiceIcon, ivFavorite, ivCopyCode;
+    private ImageView ivFavorite, ivCopyCode;
     private View favoriteContainer;
     private MaterialButton btnMoreDetails;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable updateRunnable;
     private SlidrInterface slidrInterface;
+    private ActivityResultLauncher<Intent> editServiceLauncher;
 
 
     @Override
@@ -57,7 +61,7 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
         getWindow().setAttributes(getWindow().getAttributes());
 
         setContentView(R.layout.activity_service_details);
-        overridePendingTransition(R.anim.slide_in_right, 0);
+        TransitionHelper.setOnStart(this, R.anim.slide_in_right);
 
         long serviceId = getIntent().getLongExtra("SERVICE_ID", -1);
         if (serviceId == -1) {
@@ -79,6 +83,25 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
         setupSwipeToGoBack();
         startCodeUpdates();
         setupBackPressedHandler();
+
+        editServiceLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    boolean updated = result.getData().getBooleanExtra("SERVICE_UPDATED", false);
+                    if (updated) {
+                        long id = result.getData().getLongExtra("SERVICE_ID", -1);
+                        if (id != -1) {
+                            Service updatedService = dbHelper.getService(id);
+                            if (updatedService != null) {
+                                service = updatedService;
+                                setupViews();
+                            }
+                        }
+                    }
+                }
+            }
+        );
     }
 
     private void initViews() {
@@ -90,7 +113,6 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
         tvCode = findViewById(R.id.tvCode);
 
         progressBar = findViewById(R.id.progressBar);
-        ivServiceIcon = findViewById(R.id.ivServiceIcon);
         ivFavorite = findViewById(R.id.ivFavorite);
         ivCopyCode = findViewById(R.id.ivCopyCode);
 
@@ -103,11 +125,9 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
         tvServiceName.setText(service.getServiceName());
 
         String accountOrIssuer = service.getAccount();
-        if (accountOrIssuer == null || accountOrIssuer.isEmpty())
-            accountOrIssuer = service.getIssuer();
-
-        if (accountOrIssuer == null || accountOrIssuer.isEmpty())
-            accountOrIssuer = "";
+        if (accountOrIssuer == null || accountOrIssuer.isEmpty()) {
+            accountOrIssuer = service.getIssuer() != null ? service.getIssuer() : "";
+        }
 
         tvAccount.setVisibility(accountOrIssuer.isEmpty() ? View.GONE : View.VISIBLE);
         tvAccount.setText(accountOrIssuer);
@@ -131,10 +151,11 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
                 return true;
             }
             @Override public void onSlideStateChanged(int state) {
-                if (state == ViewDragHelper.STATE_DRAGGING)
+                if (state == ViewDragHelper.STATE_DRAGGING) {
                     handler.removeCallbacks(updateRunnable);
-                else
+                } else {
                     handler.post(updateRunnable);
+                }
             }
             @Override public void onSlideChange(float percent) {}
             @Override public void onSlideOpened() {}
@@ -174,11 +195,15 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
     }
 
     private void updateCode() {
-        String algorithm = service.getAlgorithm() != null ? service.getAlgorithm() : "SHA1";
-        short digits = service.getDigits() > 0 ? service.getDigits() : 6;
-
-        String code = TOTPGenerator.generateCode(service.getSecretKey(), algorithm, digits);
-        tvCode.setText(code.length() == digits ? TOTPGenerator.formatCode(code) : code);
+        String code = TOTPGenerator.generateCode(
+            service.getSecretKey(),
+            service.getAlgorithm(),
+            service.getDigits(),
+            service.getPeriod()
+        );
+        tvCode.setText(
+            code.length() == service.getDigits() ? TOTPGenerator.formatCode(code) : code
+        );
         updateTimer();
     }
     private void updateFavoriteIcon(boolean isFavorite) {
@@ -203,17 +228,17 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
                 .scaleY(1.0f)
                 .setDuration(150)
                 .withEndAction(() -> favoriteContainer.animate()
-                        .scaleX(1.1f)
-                        .scaleY(1.1f)
-                        .setDuration(150)
-                        .start())
+                    .scaleX(1.1f)
+                    .scaleY(1.1f)
+                    .setDuration(150)
+                    .start())
                 .start();
         }
     }
     private void updateTimer() {
-        progressBar.setProgress(TOTPGenerator.getTimerProgress());
+        progressBar.setProgress(TOTPGenerator.getTimerProgress(service.getPeriod()));
 
-        if (TOTPGenerator.getTimeRemainingFromGenerator() <= 5) {
+        if (TOTPGenerator.getTimerProgress(service.getPeriod()) >= 80) {
             tvCode.setTextColor(ContextCompat.getColor(this, R.color.attention_color));
             progressBar.setProgressTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.attention_color)));
         } else {
@@ -264,19 +289,19 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
 
     @Override
     public void onEditClick(Service service) {
-        // TODO: Реализовать редактирование
-        Toast.makeText(this, R.string.soon_button, Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, ServiceEditActivity.class);
+        intent.putExtra("SERVICE_ID", service.getId());
+        editServiceLauncher.launch(intent);
     }
 
     @Override
     public void onDeleteClick(Service serviceToDelete) {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.delete_service)
-                .setMessage(String.format(getString(R.string.delete_service_this_action_cannot_be_undone), serviceToDelete.getServiceName()))
-                .setPositiveButton(R.string.service_delete_button, (dialog, which) -> finishActivityWithResult(true, true))
-                .setNegativeButton(R.string.cancel_button, null)
-                .setIcon(R.drawable.ic_warning)
-                .show();
+        new AlertDialog.Builder(this, R.style.MyDialogTheme)
+            .setTitle(R.string.delete_service)
+            .setMessage(String.format(getString(R.string.delete_service_this_action_cannot_be_undone), serviceToDelete.getServiceName()))
+            .setPositiveButton(R.string.service_delete_button, (dialog, which) -> finishActivityWithResult(true, true))
+            .setNegativeButton(R.string.cancel_button, null)
+            .show();
     }
 
     @Override
@@ -308,8 +333,9 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
     }
 
     private void finishActivityWithResult(boolean serviceNeedToDelete, boolean activityNeedToAnimate){
-        if (slidrInterface != null)
+        if (slidrInterface != null) {
             slidrInterface.lock();
+        }
 
         Intent intent = new Intent(ServiceDetailActivity.this, MainActivity.class);
         intent.putExtra("service_id", service.getId());
@@ -317,6 +343,6 @@ public class ServiceDetailActivity extends MyActivity implements ServiceDetailsB
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         setResult(RESULT_OK, intent);
         finish();
-        overridePendingTransition(0, activityNeedToAnimate ? R.anim.slide_out_right : 0);
+        TransitionHelper.setOnClose(this, activityNeedToAnimate ? R.anim.slide_out_right : 0);
     }
 }

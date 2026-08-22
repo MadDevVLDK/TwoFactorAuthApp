@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.os.BundleCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
@@ -50,8 +51,9 @@ public class QRCodeBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null)
-            service = getArguments().getParcelable("service");
+        if (getArguments() != null) {
+            service = BundleCompat.getParcelable(getArguments(), "service", Service.class);
+        }
     }
 
     @Nullable
@@ -72,13 +74,13 @@ public class QRCodeBottomSheet extends BottomSheetDialogFragment {
             tvServiceName.setText(service.getServiceName());
             generateQRCode();
 
-            if (qrBitmap != null)
+            if (qrBitmap != null) {
                 qrImageView.setImageBitmap(qrBitmap);
+            }
         }
 
         btnSaveToGallery.setOnClickListener(v -> {
-            if (qrBitmap == null)
-                return;
+            if (qrBitmap == null) return;
 
             try {
                 saveQRCode(Environment.DIRECTORY_PICTURES);
@@ -90,15 +92,12 @@ public class QRCodeBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void generateQRCode() {
-        if (service == null)
-            return;
+        if (service == null) return;
 
         String keyName = service.getServiceName() != null ? service.getServiceName() : "";
         String account = service.getAccount() != null ? service.getAccount() : "";
-        String secretKey = service.getSecretKey();
         String issuer = service.getIssuer() != null ? service.getIssuer() : service.getServiceName();
-        String algorithm = service.getAlgorithm() != null ? service.getAlgorithm() : "SHA1";
-        short digits = service.getDigits() > 0 ? service.getDigits() : 6;
+        String algorithm = service.getAlgorithm() != null ? service.getAlgorithm() : Service.DEFAULT_ALGORITHM;
 
         String label;
         if (!account.isEmpty() && !keyName.isEmpty()) {
@@ -113,11 +112,12 @@ public class QRCodeBottomSheet extends BottomSheetDialogFragment {
 
         StringBuilder qrBuilder = new StringBuilder();
         qrBuilder.append("otpauth://totp/")
-                .append(Uri.encode(label))
-                .append("?secret=").append(secretKey)
-                .append("&issuer=").append(Uri.encode(issuer))
-                .append("&algorithm=").append(algorithm)
-                .append("&digits=").append(digits);
+            .append(Uri.encode(label))
+            .append("?secret=").append(service.getSecretKey())
+            .append("&issuer=").append(Uri.encode(issuer))
+            .append("&algorithm=").append(algorithm)
+            .append("&digits=").append(service.getDigits())
+            .append("&period=").append(service.getPeriod());
 
         try {
             BitMatrix bitMatrix = new QRCodeWriter().encode(qrBuilder.toString(), BarcodeFormat.QR_CODE, 512, 512);
@@ -126,17 +126,18 @@ public class QRCodeBottomSheet extends BottomSheetDialogFragment {
             int height = bitMatrix.getHeight();
             qrBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
 
-            for (int x = 0; x < width; x++)
-                for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
                     qrBitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
 
         } catch (WriterException e) {
             Toast.makeText(getContext(), R.string.failed_to_generate_qr_code, Toast.LENGTH_SHORT).show();
         }
     }
     private void saveQRCode(String path) throws IOException {
-        if (qrBitmap == null)
-            return;
+        if (qrBitmap == null) return;
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String fileName = "QR_" + service.getServiceName() + "_" + timeStamp + ".png";

@@ -3,8 +3,6 @@ package ru.superplushkin.twofactorauthapp.activity;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -36,14 +34,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import ru.superplushkin.twofactorauthapp.db.DatabaseHelper;
 import ru.superplushkin.twofactorauthapp.R;
 import ru.superplushkin.twofactorauthapp.model.SimpleService;
-import ru.superplushkin.twofactorauthapp.subclasses.LocaleHelper;
 import ru.superplushkin.twofactorauthapp.subclasses.ServiceDiffCallback;
 import ru.superplushkin.twofactorauthapp.adapter.SimpleServiceAdapter;
 import ru.superplushkin.twofactorauthapp.model.Service;
@@ -175,8 +170,9 @@ public class MainActivity extends MyActivity {
     public boolean onSupportNavigateUp() {
         var settingsDialog = new LeftSlideDialogFragment();
         settingsDialog.setOnSettingsAppliedListener((needRestart) -> {
-            if (needRestart)
+            if (needRestart){
                 new Handler(Looper.getMainLooper()).postDelayed(this::restartApplication, 200);
+            }
         });
         settingsDialog.show(getSupportFragmentManager(), "settings_dialog");
         return true;
@@ -216,47 +212,45 @@ public class MainActivity extends MyActivity {
         };
 
         new android.app.AlertDialog.Builder(this)
-                .setTitle(R.string.sort)
-                .setSingleChoiceItems(sortOptions, currentSortType, (dialog, which) -> {
-                    currentSortType = which;
-                    saveSortPreferences();
-                    updateFavouritesFirstMenuItem();
-                    loadServices();
-                    dialog.dismiss();
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
+            .setTitle(R.string.sort)
+            .setSingleChoiceItems(sortOptions, currentSortType, (dialog, which) -> {
+                currentSortType = which;
+                saveSortPreferences();
+                updateFavouritesFirstMenuItem();
+                loadServices();
+                dialog.dismiss();
+            })
+            .setNegativeButton(R.string.cancel_button, null)
+            .show();
     }
     private void showResetCustomOrder() {
         new AlertDialog.Builder(this)
-                .setTitle(R.string.reset_order)
-                .setMessage(R.string.reset_custom_sort_order)
-                .setPositiveButton(R.string.reset_button, (dialog, which) -> {
-                    new Thread(() -> {
-                        List<Service> services = dbHelper.getAllServices();
+            .setTitle(R.string.reset_order)
+            .setMessage(R.string.reset_custom_sort_order)
+            .setPositiveButton(R.string.reset_button, (dialog, which) -> new Thread(() -> {
+                List<Service> services = dbHelper.getAllServices();
 
-                        services.sort((s1, s2) -> {
-                            if (s1.isFavorite() != s2.isFavorite())
-                                return s1.isFavorite() ? -1 : 1;
+                services.sort((s1, s2) -> {
+                    if (s1.isFavorite() != s2.isFavorite())
+                        return s1.isFavorite() ? -1 : 1;
 
-                            String name1 = s1.getDisplayName();
-                            String name2 = s2.getDisplayName();
-                            return name1.compareToIgnoreCase(name2);
-                        });
+                    String name1 = s1.getServiceName();
+                    String name2 = s2.getServiceName();
+                    return name1.compareToIgnoreCase(name2);
+                });
 
-                        for (int i = 0; i < services.size(); i++)
-                            dbHelper.updateServiceOrder(services.get(i).getId(), i);
+                for (int i = 0; i < services.size(); i++)
+                    dbHelper.updateServiceOrder(services.get(i).getId(), i);
 
-                        runOnUiThread(() -> {
-                            currentSortType = SortType.DEFAULT.toInt();
-                            saveSortPreferences();
-                            loadServices();
-                            Toast.makeText(this, R.string.sort_order_reseted, Toast.LENGTH_SHORT).show();
-                        });
-                    }).start();
-                })
-                .setNegativeButton(R.string.cancel_button, null)
-                .show();
+                runOnUiThread(() -> {
+                    currentSortType = SortType.DEFAULT.toInt();
+                    saveSortPreferences();
+                    loadServices();
+                    Toast.makeText(this, R.string.sort_order_reseted, Toast.LENGTH_SHORT).show();
+                });
+            }).start())
+            .setNegativeButton(R.string.cancel_button, null)
+            .show();
     }
 
     private void updateFavouritesFirstMenuItem() {
@@ -270,13 +264,13 @@ public class MainActivity extends MyActivity {
 
         if (!isFabHintVisible) {
             fabHint.animate().scaleX(0.1f).scaleY(0.1f)
-                    .setDuration(150)
-                    .setInterpolator(new AccelerateInterpolator())
-                    .withEndAction(() -> {
-                        fabHint.setVisibility(View.INVISIBLE);
-                        fabHint.setScaleX(1f);
-                        fabHint.setScaleY(1f);
-                    }).start();
+                .setDuration(150)
+                .setInterpolator(new AccelerateInterpolator())
+                .withEndAction(() -> {
+                    fabHint.setVisibility(View.INVISIBLE);
+                    fabHint.setScaleX(1f);
+                    fabHint.setScaleY(1f);
+                }).start();
         }
         else {
             fabHint.setVisibility(View.VISIBLE);
@@ -284,9 +278,9 @@ public class MainActivity extends MyActivity {
             fabHint.setScaleX(0.1f);
             fabHint.setScaleY(0.1f);
             fabHint.animate().scaleX(1f).scaleY(1f)
-                    .setDuration(200)
-                    .setInterpolator(new OvershootInterpolator(0.8f))
-                    .start();
+                .setDuration(200)
+                .setInterpolator(new OvershootInterpolator(0.8f))
+                .start();
         }
     }
 
@@ -294,8 +288,9 @@ public class MainActivity extends MyActivity {
         List<SimpleService> newServices = sortServices(dbHelper.getAllSimpleServices());
         List<SimpleService> oldServices = new ArrayList<>(serviceList);
 
-        if (favoritesFirst && currentSortType != SortType.CUSTOM.toInt())
+        if (favoritesFirst && currentSortType != SortType.CUSTOM.toInt()) {
             newServices = sortFavoritesFirstServices(newServices);
+        }
 
         var diffCallback = new ServiceDiffCallback(oldServices, newServices);
         DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(diffCallback);
@@ -339,42 +334,31 @@ public class MainActivity extends MyActivity {
             for (int i = 0; i < services.size(); i++) {
                 SimpleService service = services.get(i);
                 dbHelper.updateServiceOrder(service.getId(), i);
-                service.setSortOrder(i);
+                service.setSortOrder((short)i);
             }
         }).start();
     }
 
     private List<SimpleService> sortServices(List<SimpleService> services) {
-        if (currentSortType == SortType.NAME_ASC.toInt() || currentSortType == SortType.DEFAULT.toInt() ) {
+        if (currentSortType == SortType.NAME_ASC.toInt() || currentSortType == SortType.DEFAULT.toInt()) {
             services.sort((s1, s2) -> {
-                String name1 = s1.getDisplayName();
-                String name2 = s2.getDisplayName();
+                String name1 = s1.getServiceName();
+                String name2 = s2.getServiceName();
                 return name1.compareToIgnoreCase(name2);
             });
-        }
-        else if (currentSortType == SortType.NAME_DESC.toInt() ) {
+        } else if (currentSortType == SortType.NAME_DESC.toInt()) {
             services.sort((s1, s2) -> {
-                String name1 = s1.getDisplayName();
-                String name2 = s2.getDisplayName();
+                String name1 = s1.getServiceName();
+                String name2 = s2.getServiceName();
                 return name2.compareToIgnoreCase(name1);
             });
-        }
-        else if (currentSortType == SortType.DATE_ASC.toInt() ) {
-            services.sort((s1, s2) -> {
-                String date1 = s1.getCreatedAt();
-                String date2 = s2.getCreatedAt();
-                return date1.compareTo(date2);
-            });
-        }
-        else if (currentSortType == SortType.DATE_DESC.toInt() ) {
-            services.sort((s1, s2) -> {
-                String date1 = s1.getCreatedAt();
-                String date2 = s2.getCreatedAt();
-                return date2.compareTo(date1);
-            });
-        }
-        else if (currentSortType == SortType.CUSTOM.toInt() )
+        } else if (currentSortType == SortType.DATE_ASC.toInt()) {
+            services.sort(Comparator.comparingLong(SimpleService::getCreatedAt));
+        } else if (currentSortType == SortType.DATE_DESC.toInt()) {
+            services.sort((s1, s2) -> Long.compare(s2.getCreatedAt(), s1.getCreatedAt()));
+        } else if (currentSortType == SortType.CUSTOM.toInt()) {
             services.sort(Comparator.comparingInt(SimpleService::getSortOrder));
+        }
 
         return services;
     }
@@ -383,12 +367,12 @@ public class MainActivity extends MyActivity {
     }
 
     public void navigateToServiceDetails(long serviceId) {
-        Intent intent = new Intent(MainActivity.this, ServiceDetailActivity.class);
+        var intent = new Intent(MainActivity.this, ServiceDetailActivity.class);
         intent.putExtra("SERVICE_ID", serviceId);
         serviceDetailLauncher.launch(intent);
     }
     private void navigateToAddService() {
-        Intent intent = new Intent(MainActivity.this, ServiceAddActivity.class);
+        var intent = new Intent(MainActivity.this, ServiceAddActivity.class);
         addServiceLauncher.launch(intent);
     }
 
@@ -441,36 +425,26 @@ public class MainActivity extends MyActivity {
     }
     private void showUndoSnackbar(Service deletedService) {
         Snackbar.make(fab, String.format(getString(R.string.service_deleted), deletedService.getServiceName()), Snackbar.LENGTH_LONG)
-                .setAction(R.string.cancel_button, v -> {
-                    long newId = dbHelper.restoreService(deletedService);
-                    if (newId != -1) {
+            .setAction(R.string.cancel_button, v -> {
+                long newId = dbHelper.restoreService(deletedService);
+                if (newId != -1) {
+                    Service serviceRestored = dbHelper.getService(newId);
+                    if (serviceRestored != null) {
+                        int newPosition = serviceList.size();
+                        adapter.restoreService(serviceRestored);
 
-                        Service serviceRestored = dbHelper.getService(newId);
-                        if (serviceRestored != null) {
+                        loadServices();
 
-                            int newPosition = serviceList.size();
-                            adapter.restoreService(serviceRestored);
+                        Toast.makeText(this, R.string.service_restored, Toast.LENGTH_SHORT).show();
 
-                            loadServices();
-
-                            Toast.makeText(this, R.string.service_restored, Toast.LENGTH_SHORT).show();
-
-                            recyclerView.smoothScrollToPosition(newPosition);
-                        }
+                        recyclerView.smoothScrollToPosition(newPosition);
                     }
-                })
-                .setActionTextColor(ContextCompat.getColor(this, R.color.attention_color)).show();
+                }
+            })
+            .setActionTextColor(ContextCompat.getColor(this, R.color.attention_color)).show();
     }
 
     private void restartApplication() {
-        String savedLanguage = LocaleHelper.getCurrentLanguage(this);
-
-        Resources resources = getResources();
-        Configuration config = resources.getConfiguration();
-        config.setLocale(new Locale(savedLanguage));
-
-        resources.updateConfiguration(config, resources.getDisplayMetrics());
-
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);

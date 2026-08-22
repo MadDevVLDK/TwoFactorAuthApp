@@ -1,6 +1,6 @@
 <resources>
 
-    <string name="app_name">TwoFactorAuthApp</string>
+    <string name="app_name">TOTP</string>
 
     <string name="no_2fa_keys_yet">Нет Ключей</string>
     <string name="add_your_first_two_factor_authentication_key_to_get_started">Добавь свой первый ключ для старта</string>
@@ -29,9 +29,9 @@
     <string name="service_add_secret_key">Секретный ключ</string>
     <string name="service_add_issuer">Сервис</string>
     <string name="service_add_additional_options">Дополнительные настройки</string>
-    <string name="service_add_account">Почта или Логин (опционально)</string>
-    <string name="service_add_algorithm">Алгоритм генерации (опционально)</string>
-    <string name="service_add_digits">Количество цифр в коде (опционально)</string>
+    <string name="service_add_account">Почта или Логин</string>
+    <string name="service_add_algorithm">Алгоритм генерации</string>
+    <string name="service_add_digits">Количество цифр в коде</string>
 
     <string name="service_add_check_key_button">Проверить ключ</string>
     <string name="service_add_qr_button">QR</string>
@@ -123,11 +123,13 @@
     <string name="chosen_not_image">Выбрана не фотография</string>
     <string name="failed_to_load_image">Ошибка при загрузке изображения\n</string>
     <string name="issuer_required">Название сервиса должно быть заполнено</string>
-    <string name="scan_cooldown">Повторный поиск QR-кода...</string>
+    <string name="scan_cooldown">Повторный поиск QR-кода…</string>
     <string name="invalid_algorithm">Алгоритм должен быть SHA1, SHA256 или SHA512</string>
     <string name="digits_must_be_between_4_and_10">Количество цифр должно быть от 4 до 10</string>
+    <string name="period_must_be_between_10_and_60">Время генерации должно быть между 10 и 60</string>
     <string name="invalid_digits_format">Неверный формат цифр</string>
     <string name="service_algorithm">Алгоритм</string>
+    <string name="service_period">Время генерации</string>
     <string name="service_digits">Цифры</string>
     <string name="no_gallery_app">Нет приложения для выбора изображений</string>
 
@@ -142,12 +144,18 @@
     <string name="dark_theme">Тёмная</string>
     <string name="light_theme">Светлая</string>
     <string name="apply_settings">Применить</string>
-    <string name="version_info">Версия 1.0.0</string>
-    <string name="author_info">Автор: SuperPlushkin</string>
+    <string name="version_info">Версия 2.0.3.6</string>
+    <string name="author_info">Автор: MadDevVLDK</string>
     <string name="settings_applied">Настройки применены</string>
     <string name="settings_restart_required">Требуется перезапуск приложения</string>
     <string name="later_button">Позже</string>
     <string name="settings_restart_message">Перезапустите приложение для применения настроек</string>
     <string name="select_theme_hint">выберите тему\n</string>
+    <string name="service_add_period">Время генерации</string>
+
+    <string name="edit_service">Редактирование</string>
+    <string name="edit_service_title">Редактирование сервиса</string>
+    <string name="service_updated">Сервис обновлен</string>
+    <string name="service_update_error">Ошибка обновления</string>
 
 </resources>

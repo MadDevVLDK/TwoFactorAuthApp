@@ -1,6 +1,7 @@
 package ru.superplushkin.twofactorauthapp.subclasses;
 
 import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.codec.binary.Base32;
+
 import dev.turingcomplete.kotlinonetimepassword.HmacAlgorithm;
 import dev.turingcomplete.kotlinonetimepassword.TimeBasedOneTimePasswordConfig;
 import dev.turingcomplete.kotlinonetimepassword.TimeBasedOneTimePasswordGenerator;
@@ -9,18 +10,16 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class TOTPGenerator {
-    private static final int TIME_STEP = 30;
     private static final Base32 BASE32 = new Base32();
     private static final short MAX_DIGITS = 10;
     private static final short MIN_DIGITS = 4;
-    private static volatile long lastTimeUpdate = 0;
-    private static volatile long cachedRemainingTime = 0;
-    private static final Object timeLock = new Object();
+    private static final short MAX_PERIOD = 60;
+    private static final short MIN_PERIOD = 10;
 
-    public static String generateCode(String secretKey, String algorithm, int digits) {
-        return generateCodeForTime(secretKey, algorithm, digits, new Date());
+    public static String generateCode(String secretKey, String algorithm, short digits, short period) {
+        return generateCodeForTime(secretKey, algorithm, digits, period, new Date());
     }
-    public static String generateCodeForTime(String base32Secret, String algorithm, int digits, Date date) {
+    public static String generateCodeForTime(String base32Secret, String algorithm, short digits, short period, Date date) {
         try {
             byte[] decodedKey = BASE32.decode(cleanSecretKey(base32Secret));
 
@@ -38,7 +37,7 @@ public class TOTPGenerator {
                     break;
             }
 
-            var config = new TimeBasedOneTimePasswordConfig(TIME_STEP, TimeUnit.SECONDS, digits, hmacAlgorithm);
+            var config = new TimeBasedOneTimePasswordConfig(period, TimeUnit.SECONDS, digits, hmacAlgorithm);
             var generator = new TimeBasedOneTimePasswordGenerator(decodedKey, config);
             return generator.generate(date);
         } catch (Exception e) {
@@ -46,21 +45,10 @@ public class TOTPGenerator {
         }
     }
 
-    public static long getTimeRemainingFromGenerator() {
-        long currentTime = System.currentTimeMillis();
-        synchronized (timeLock) {
-            if (currentTime - lastTimeUpdate > 100) {
-                long currentTimeSeconds = currentTime / 1000;
-                cachedRemainingTime = TIME_STEP - (currentTimeSeconds % TIME_STEP);
-                lastTimeUpdate = currentTime;
-            }
-            return cachedRemainingTime;
-        }
-    }
-    public static int getTimerProgress() {
-        long remaining = getTimeRemainingFromGenerator();
-        long elapsed = TIME_STEP - remaining;
-        return (int) ((elapsed * 100) / TIME_STEP);
+    public static int getTimerProgress(short period) {
+        long remaining = period - (System.currentTimeMillis() / 1000 % period);
+        long elapsed = period - remaining;
+        return (int) ((elapsed * 100) / period);
     }
 
     private static String cleanSecretKey(String secretKey) {
@@ -90,19 +78,17 @@ public class TOTPGenerator {
         String algoUpper = algorithm.toUpperCase();
         return algoUpper.equals("SHA1") || algoUpper.equals("SHA256") || algoUpper.equals("SHA512");
     }
-    public static boolean isValidDigits(int digits) {
+
+    public static boolean isValidDigits(short digits) {
         return digits >= MIN_DIGITS && digits <= MAX_DIGITS;
+    }
+
+    public static boolean isValidPeriod(short period) {
+        return period >= MIN_PERIOD && period <= MAX_PERIOD;
     }
 
     public static String formatCode(String code) {
         int mid = code.length() / 2;
         return String.format("%s %s", code.substring(0, mid), code.substring(mid));
-    }
-
-    public static short getMaxDigits(){
-        return MAX_DIGITS;
-    }
-    public static short getMinDigits(){
-        return MIN_DIGITS;
     }
 }

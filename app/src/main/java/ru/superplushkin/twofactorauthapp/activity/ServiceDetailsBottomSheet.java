@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.core.os.BundleCompat;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -28,7 +29,6 @@ public class ServiceDetailsBottomSheet extends BottomSheetDialogFragment {
     private Service service;
     private OnServiceBottomSheetClickListener clickListener;
 
-    private boolean isKeyVisible = false;
 
     public static ServiceDetailsBottomSheet newInstance(Service service) {
         var fragment = new ServiceDetailsBottomSheet();
@@ -45,8 +45,9 @@ public class ServiceDetailsBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null)
-            service = getArguments().getParcelable("service");
+        if (getArguments() != null) {
+            service = BundleCompat.getParcelable(getArguments(), "service", Service.class);
+        }
     }
 
     @Nullable
@@ -64,10 +65,10 @@ public class ServiceDetailsBottomSheet extends BottomSheetDialogFragment {
         TextView tvIssuer = view.findViewById(R.id.tvIssuer);
         TextView tvCreatedAt = view.findViewById(R.id.tvCreatedAt);
         TextView tvUsageCount = view.findViewById(R.id.tvUsageCount);
-        TextView tvSecretKey = view.findViewById(R.id.tvSecretKey);
         TextView tvAlgorithm = view.findViewById(R.id.tvAlgorithm);
         TextView tvDigits = view.findViewById(R.id.tvDigits);
-        MaterialButton btnToggleKey = view.findViewById(R.id.btnToggleKey);
+        TextView tvPeriod = view.findViewById(R.id.tvPeriod);
+
         MaterialButton btnQR = view.findViewById(R.id.btnQR);
         MaterialButton btnEdit = view.findViewById(R.id.btnEdit);
         MaterialButton btnDelete = view.findViewById(R.id.btnDelete);
@@ -85,67 +86,34 @@ public class ServiceDetailsBottomSheet extends BottomSheetDialogFragment {
             tvIssuer.setText(issuer != null && !issuer.isEmpty() ? issuer : getString(R.string.not_specified));
             tvIssuer.setOnClickListener(v -> copyCodeToClipboard(issuer));
 
-            String createdAt = service.getCreatedAt();
-            if (createdAt != null && !createdAt.isEmpty()) {
-                try {
-                    SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-                    SimpleDateFormat outputFormat = new SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault());
-                    Date date = inputFormat.parse(createdAt);
-                    if (date != null)
-                        tvCreatedAt.setText(outputFormat.format(date));
-                } catch (Exception e) {
-                    tvCreatedAt.setText(createdAt);
-                }
-            }
-            tvIssuer.setOnClickListener(v -> copyCodeToClipboard(createdAt));
+            Date date = new Date(service.getCreatedAt());
+            SimpleDateFormat outputFormat = new SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault());
+            tvCreatedAt.setText(outputFormat.format(date));
 
             tvUsageCount.setText(String.format(Locale.getDefault(), getString(R.string.service_used_times), service.getUsageCount()));
-
-            String secretKey = service.getSecretKey();
-            if (secretKey != null && !secretKey.isEmpty())
-                tvSecretKey.setText("*".repeat(secretKey.length()));
-            tvSecretKey.setOnClickListener(v -> {
-                if(isKeyVisible)
-                    copyCodeToClipboard(secretKey);
-            });
-
-            String algorithm = service.getAlgorithm();
-            tvAlgorithm.setText(algorithm != null && !algorithm.isEmpty() ? algorithm : "SHA1");
-            tvAlgorithm.setOnClickListener(v -> copyCodeToClipboard(algorithm));
-
-            short digits = service.getDigits();
-            tvDigits.setText(digits > 0 ? String.valueOf(digits) : "6");
-            tvDigits.setOnClickListener(v -> copyCodeToClipboard(String.valueOf(digits)));
+            tvAlgorithm.setText(service.getAlgorithm());
+            tvDigits.setText(String.valueOf(service.getDigits()));
+            tvPeriod.setText(String.valueOf(service.getPeriod()));
         }
 
-        btnToggleKey.setOnClickListener(v -> {
-            String secretKey = service.getSecretKey();
-            isKeyVisible = !isKeyVisible;
-
-            if (isKeyVisible) {
-                tvSecretKey.setText(secretKey);
-                btnToggleKey.setText(getString(R.string.service_hide_button));
-            } else {
-                tvSecretKey.setText("*".repeat(secretKey.length()));
-                btnToggleKey.setText(getString(R.string.service_show_button));
-            }
-        });
-
         btnQR.setOnClickListener(v -> {
-            if (clickListener != null && service != null)
+            if (clickListener != null && service != null) {
                 clickListener.onQRClick(service);
+            }
             dismiss();
         });
 
         btnEdit.setOnClickListener(v -> {
-            if (clickListener != null && service != null)
+            if (clickListener != null && service != null) {
                 clickListener.onEditClick(service);
+            }
             dismiss();
         });
 
         btnDelete.setOnClickListener(v -> {
-            if (clickListener != null && service != null)
+            if (clickListener != null && service != null) {
                 clickListener.onDeleteClick(service);
+            }
             dismiss();
         });
     }

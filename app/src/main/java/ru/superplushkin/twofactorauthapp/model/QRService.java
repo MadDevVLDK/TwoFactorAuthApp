@@ -12,14 +12,17 @@ public class QRService implements Parcelable {
     private final String issuer;
     private final String algorithm;
     private final short digits;
+    private final short period;
 
-    public QRService(String serviceName, String secretKey, String account, String issuer, String algorithm, short digits){
+
+    public QRService(String serviceName, String secretKey, String account, String issuer, String algorithm, short digits, short period){
         this.serviceName = serviceName;
         this.secretKey = secretKey;
         this.account = account;
         this.issuer = issuer;
         this.algorithm = algorithm;
         this.digits = digits;
+        this.period = period;
     }
     protected QRService(Parcel in) {
         serviceName = in.readString();
@@ -28,6 +31,7 @@ public class QRService implements Parcelable {
         issuer = in.readString();
         algorithm = in.readString();
         digits = (short) in.readInt();
+        period = (short) in.readInt();
     }
 
     public String getServiceName() {
@@ -48,6 +52,7 @@ public class QRService implements Parcelable {
     public short getDigits() {
         return digits;
     }
+    public short getPeriod() { return period; }
 
     @Override
     public int describeContents() {
@@ -74,5 +79,6 @@ public class QRService implements Parcelable {
         dest.writeString(issuer);
         dest.writeString(algorithm);
         dest.writeInt(digits);
+        dest.writeInt(period);
     }
 }

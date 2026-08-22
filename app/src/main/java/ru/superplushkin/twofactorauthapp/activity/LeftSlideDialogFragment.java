@@ -51,8 +51,9 @@ public class LeftSlideDialogFragment extends DialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        if (getDialog() != null && getDialog().getWindow() != null)
+        if (getDialog() != null && getDialog().getWindow() != null) {
             getDialog().getWindow().setGravity(Gravity.START);
+        }
 
         return inflater.inflate(R.layout.menu_settings_drawer, container, false);
     }
@@ -60,11 +61,6 @@ public class LeftSlideDialogFragment extends DialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        var settingsContainer = view.findViewById(R.id.settings_container);
-        ViewGroup.LayoutParams params = settingsContainer.getLayoutParams();
-        params.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.75);
-        settingsContainer.setLayoutParams(params);
 
         themeCodesArray = getResources().getStringArray(R.array.themes_codes_array);
 
@@ -147,80 +143,59 @@ public class LeftSlideDialogFragment extends DialogFragment {
                 MaterialButton checkedButton = group.findViewById(checkedId);
                 String newLanguage = (String)checkedButton.getTag();
 
-                if (!previousLanguage.equals(newLanguage))
+                if (!previousLanguage.equals(newLanguage)) {
                     showRestartConfirmationDialogLocale(newLanguage);
+                }
             }
         });
 
         themeSpinner.setOnItemClickListener((parent, view, position, id) -> {
             String newTheme = themeCodesArray[position];
 
-            if (!previousTheme.equals(newTheme))
+            if (!previousTheme.equals(newTheme)) {
                 showRestartConfirmationDialogTheme(newTheme);
+            }
         });
     }
 
     private void showRestartConfirmationDialogLocale(String newValue) {
         FragmentActivity activity = getActivity();
-        if (activity == null)
-            return;
+        if (activity == null) return;
 
         new androidx.appcompat.app.AlertDialog.Builder(activity)
-                .setTitle(R.string.settings_restart_required)
-                .setMessage(R.string.settings_restart_message)
-                .setPositiveButton(R.string.ok_button, (dialog, which) -> {
-                    LocaleHelper.setCurrentLanguage(requireContext(), newValue);
-                    previousLanguage = newValue;
+            .setTitle(R.string.settings_restart_required)
+            .setMessage(R.string.settings_restart_message)
+            .setPositiveButton(R.string.ok_button, (dialog, which) -> {
+                LocaleHelper.setCurrentLanguage(requireContext(), newValue);
+                previousLanguage = newValue;
 
-                    if (listener != null)
-                        listener.onSettingsApplied(true);
-                })
-                .setNegativeButton(R.string.later_button, (dialog, which) -> selectLanguageButton(previousLanguage))
-                .setOnCancelListener(dialog -> selectLanguageButton(previousLanguage))
-                .show();
+                if (listener != null) {
+                    listener.onSettingsApplied(true);
+                }
+            })
+            .setNegativeButton(R.string.later_button, (dialog, which) -> selectLanguageButton(previousLanguage))
+            .setOnCancelListener(dialog -> selectLanguageButton(previousLanguage))
+            .show();
     }
     private void showRestartConfirmationDialogTheme(String newValue) {
         FragmentActivity activity = getActivity();
-        if (activity == null)
-            return;
+        if (activity == null) return;
 
         selectSpinnerText(newValue);
 
         new androidx.appcompat.app.AlertDialog.Builder(activity)
-                .setTitle(R.string.settings_restart_required)
-                .setMessage(R.string.settings_restart_message)
-                .setPositiveButton(R.string.ok_button, (dialog, which) -> {
-                    ThemeHelper.saveTheme(requireContext(), newValue);
-                    previousTheme = newValue;
+            .setTitle(R.string.settings_restart_required)
+            .setMessage(R.string.settings_restart_message)
+            .setPositiveButton(R.string.ok_button, (dialog, which) -> {
+                ThemeHelper.saveTheme(requireContext(), newValue);
+                previousTheme = newValue;
 
-                    if (listener != null)
-                        listener.onSettingsApplied(true);
-                })
-                .setNegativeButton(R.string.later_button, (dialog, which) -> selectSpinnerText(previousTheme))
-                .setOnCancelListener(dialog -> selectSpinnerText(previousTheme))
-                .show();
-    }
-
-    @Override
-    public void onDestroyView() {
-//        if (themeSpinner != null && themeSpinner.getAdapter() != null)
-//            themeSpinner.setAdapter(null);
-
-//        if (languageToggleGroup != null) {
-//            languageToggleGroup.clearOnButtonCheckedListeners();
-//            languageToggleGroup.removeAllViews();
-//        }
-//
-//        languageToggleGroup = null;
-//        themeSpinner = null;
-
-        super.onDestroyView();
-    }
-
-    @Override
-    public void onDestroy() {
-//        listener = null;
-
-        super.onDestroy();
+                if (listener != null) {
+                    listener.onSettingsApplied(true);
+                }
+            })
+            .setNegativeButton(R.string.later_button, (dialog, which) -> selectSpinnerText(previousTheme))
+            .setOnCancelListener(dialog -> selectSpinnerText(previousTheme))
+            .show();
     }
 }

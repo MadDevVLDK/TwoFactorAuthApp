@@ -20,7 +20,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
@@ -58,6 +57,8 @@ import java.util.concurrent.TimeUnit;
 
 import ru.superplushkin.twofactorauthapp.R;
 import ru.superplushkin.twofactorauthapp.model.QRService;
+import ru.superplushkin.twofactorauthapp.model.Service;
+import ru.superplushkin.twofactorauthapp.subclasses.TransitionHelper;
 
 public class QrScannerActivity extends MyActivity {
 
@@ -91,7 +92,8 @@ public class QrScannerActivity extends MyActivity {
         super.onCreate(savedInstanceState);
 
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        overridePendingTransition(R.anim.slide_in_right, 0);
+        TransitionHelper.setOnStart(this, R.anim.slide_in_right);
+
         setContentView(R.layout.activity_qr_scanner);
 
         initViews();
@@ -100,8 +102,9 @@ public class QrScannerActivity extends MyActivity {
         setupBackPressedHandler();
         setupResultLaunchers();
 
-        if (checkCameraPermission())
+        if (checkCameraPermission()){
             startScanner();
+        }
     }
 
     private void initViews() {
@@ -150,18 +153,19 @@ public class QrScannerActivity extends MyActivity {
     }
     private void setupResultLaunchers() {
         pickImageGalleryLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    isGalleryPickerActive = false;
-                    isScanning = true;
+            result -> {
+                isGalleryPickerActive = false;
+                isScanning = true;
 
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Uri imageUri = result.getData().getData();
-                        if (imageUri != null)
-                            processImageFromGallery(imageUri);
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri imageUri = result.getData().getData();
+                    if (imageUri != null) {
+                        processImageFromGallery(imageUri);
                     }
-
-                    resumeCamera();
                 }
+
+                resumeCamera();
+            }
         );
     }
 
@@ -184,14 +188,14 @@ public class QrScannerActivity extends MyActivity {
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(cameraPreview.getSurfaceProvider());
 
-                CameraSelector cameraSelector = new CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                        .build();
+                var cameraSelector = new CameraSelector.Builder()
+                    .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                    .build();
 
                 var imageAnalysis = new ImageAnalysis.Builder()
-                        .setImageQueueDepth(1)
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build();
+                    .setImageQueueDepth(1)
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build();
 
                 imageAnalysis.setAnalyzer(cameraExecutor, this::processImageProxy);
 
@@ -214,15 +218,14 @@ public class QrScannerActivity extends MyActivity {
         Toast.makeText(this, R.string.restarting_scanner, Toast.LENGTH_SHORT).show();
     }
     private void handleScanResult(String qrContent) {
-        if (isResultProcessed || !isScanning)
-            return;
+        if (isResultProcessed || !isScanning) return;
 
         long currentTime = System.currentTimeMillis();
-        if (qrContent.equals(lastScannedQr) && (currentTime - lastSameQrScanTime < SAME_QR_DELAY_MS))
+        if (qrContent.equals(lastScannedQr) && (currentTime - lastSameQrScanTime < SAME_QR_DELAY_MS)) {
             return;
-
-        if (currentTime - lastScanTime < SCAN_COOLDOWN_MS)
+        } else if (currentTime - lastScanTime < SCAN_COOLDOWN_MS) {
             return;
+        }
 
         lastScanTime = currentTime;
 
@@ -254,8 +257,9 @@ public class QrScannerActivity extends MyActivity {
             }
 
             String path = uri.getPath();
-            if (path != null && path.startsWith("/"))
+            if (path != null && path.startsWith("/")){
                 path = path.substring(1);
+            }
 
             String label = path != null ? path : "";
             String serviceName = "";
@@ -263,7 +267,8 @@ public class QrScannerActivity extends MyActivity {
             String secret = uri.getQueryParameter("secret");
             String issuer = uri.getQueryParameter("issuer");
             String algorithm = uri.getQueryParameter("algorithm");
-            String digits = uri.getQueryParameter("digits");
+            String digitsStr = uri.getQueryParameter("digits");
+            String periodStr = uri.getQueryParameter("period");
 
             if (!label.isEmpty()) {
                 if (label.contains(":")) {
@@ -280,19 +285,29 @@ public class QrScannerActivity extends MyActivity {
                 return null;
             }
 
-            if (label.isEmpty())
+            if (label.isEmpty()) {
                 serviceName = issuer;
-
-            if (algorithm == null || algorithm.isEmpty())
-                algorithm = "SHA1";
-
-            try{
-                digits = String.valueOf(Short.parseShort(digits != null ? digits : "6"));
-            } catch(NumberFormatException ex) {
-                digits = "6";
             }
 
-            return new QRService(serviceName, secret, account, issuer, algorithm, Short.parseShort(digits));
+            if (algorithm == null || algorithm.isEmpty()) {
+                algorithm = Service.DEFAULT_ALGORITHM;
+            }
+
+            short digits = Service.DEFAULT_ALGORITHM_NUM_LENGHT;
+            if (digitsStr != null && !digitsStr.isEmpty()) {
+                try {
+                    digits = Short.parseShort(digitsStr);
+                }  catch (NumberFormatException ignored) {}
+            }
+
+            short period = Service.DEFAULT_ALGORITHM_PERIOD;
+            if (periodStr != null && !periodStr.isEmpty()) {
+                try {
+                    period = Short.parseShort(periodStr);
+                } catch (NumberFormatException ignored) {}
+            }
+
+            return new QRService(serviceName, secret, account, issuer, algorithm, digits, period);
 
         } catch (Exception e) {
             Toast.makeText(this, R.string.failed_to_parse_qr, Toast.LENGTH_SHORT).show();
@@ -301,8 +316,9 @@ public class QrScannerActivity extends MyActivity {
     }
 
     private void resumeCamera() {
-        if (cameraProvider == null && checkCameraPermission())
+        if (cameraProvider == null && checkCameraPermission()) {
             startScanner();
+        }
     }
     private void stopCamera() {
         if (cameraProvider != null) {
@@ -314,24 +330,24 @@ public class QrScannerActivity extends MyActivity {
     }
 
     private void startScanCooldown() {
-        if (cooldownFuture != null && !cooldownFuture.isDone())
+        if (cooldownFuture != null && !cooldownFuture.isDone()) {
             cooldownFuture.cancel(false);
+        }
 
         isScanning = false;
         tvHint.setText(R.string.scan_cooldown);
         tvHint.setTextColor(Color.RED);
 
-        cooldownFuture = cooldownExecutor.schedule(() -> {
-            runOnUiThread(() -> {
-                isScanning = true;
-                tvHint.setText(R.string.scan_qr_prompt);
-                tvHint.setTextColor(ContextCompat.getColor(this, R.color.text_hard_on_background_primary));
-            });
-        }, SCAN_COOLDOWN_MS, TimeUnit.MILLISECONDS);
+        cooldownFuture = cooldownExecutor.schedule(() -> runOnUiThread(() -> {
+            isScanning = true;
+            tvHint.setText(R.string.scan_qr_prompt);
+            tvHint.setTextColor(ContextCompat.getColor(this, R.color.text_hard_on_background_primary));
+        }), SCAN_COOLDOWN_MS, TimeUnit.MILLISECONDS);
     }
     private void cancelCooldown() {
-        if (cooldownFuture != null && !cooldownFuture.isDone())
+        if (cooldownFuture != null && !cooldownFuture.isDone()) {
             cooldownFuture.cancel(false);
+        }
     }
 
     private void pickImageFromGallery() {
@@ -391,15 +407,16 @@ public class QrScannerActivity extends MyActivity {
         InputImage inputImage = InputImage.fromMediaImage(imageProxy.getImage(), imageProxy.getImageInfo().getRotationDegrees());
 
         barcodeScanner.process(inputImage)
-                .addOnSuccessListener(barcodes -> {
-                    if (!barcodes.isEmpty() && isScanning && !isResultProcessed) {
-                        final String rawValue = barcodes.get(0).getRawValue();
-                        if (rawValue != null)
-                            runOnUiThread(() -> handleScanResult(rawValue));
+            .addOnSuccessListener(barcodes -> {
+                if (!barcodes.isEmpty() && isScanning && !isResultProcessed) {
+                    final String rawValue = barcodes.get(0).getRawValue();
+                    if (rawValue != null) {
+                        runOnUiThread(() -> handleScanResult(rawValue));
                     }
-                })
-                .addOnFailureListener(e -> {})
-                .addOnCompleteListener(task -> imageProxy.close());
+                }
+            })
+            .addOnFailureListener(e -> {})
+            .addOnCompleteListener(task -> imageProxy.close());
     }
 
     private String decodeQRFromBitmap(Bitmap bitmap) {
@@ -422,22 +439,22 @@ public class QrScannerActivity extends MyActivity {
 
     private void startSuccessfulScanAnimation(QRService service) {
         qrOverlay.animate()
-                .scaleX(1.1f)
-                .scaleY(1.1f)
+            .scaleX(1.1f)
+            .scaleY(1.1f)
+            .setDuration(200)
+            .withEndAction(() -> qrOverlay.animate()
+                .scaleX(1f)
+                .scaleY(1f)
                 .setDuration(200)
-                .withEndAction(() -> qrOverlay.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(200)
-                        .withEndAction(() -> qrOverlay.postDelayed(() -> finishWithData(service), 250)))
-                .start();
+                .withEndAction(() -> qrOverlay.postDelayed(() -> finishWithData(service), 250)))
+            .start();
     }
     private void startHintAnimation() {
         tvHint.animate()
-                .alpha(0.7f)
-                .setDuration(1000)
-                .withEndAction(() -> tvHint.animate().alpha(1f).setDuration(1000))
-                .start();
+            .alpha(0.7f)
+            .setDuration(1000)
+            .withEndAction(() -> tvHint.animate().alpha(1f).setDuration(1000))
+            .start();
     }
 
     @Override
@@ -465,12 +482,9 @@ public class QrScannerActivity extends MyActivity {
         super.onDestroy();
         isGalleryPickerActive = false;
         stopCamera();
-        if (cameraExecutor != null)
-            cameraExecutor.shutdown();
-        if (cooldownExecutor != null)
-            cooldownExecutor.shutdown();
-        if (barcodeScanner != null)
-            barcodeScanner.close();
+        if (cameraExecutor != null) cameraExecutor.shutdown();
+        if (cooldownExecutor != null) cooldownExecutor.shutdown();
+        if (barcodeScanner != null) barcodeScanner.close();
     }
 
     private void finishWithData(QRService service) {
@@ -478,11 +492,11 @@ public class QrScannerActivity extends MyActivity {
         resultIntent.putExtra("SCAN_RESULT_SERVICE", service);
         setResult(RESULT_OK, resultIntent);
         finish();
-        overridePendingTransition(0, R.anim.slide_out_right);
+        TransitionHelper.setOnClose(this, R.anim.slide_out_right);
     }
     private void finishWithCancel() {
         setResult(RESULT_CANCELED);
         finish();
-        overridePendingTransition(0, R.anim.slide_out_right);
+        TransitionHelper.setOnClose(this, R.anim.slide_out_right);
     }
 }

@@ -1,6 +1,6 @@
 <resources>
 
-    <string name="app_name">TwoFactorAuthApp</string>
+    <string name="app_name">TOTP</string>
 
     <string name="no_2fa_keys_yet">No Keys Yet</string>
     <string name="add_your_first_two_factor_authentication_key_to_get_started">Add your first two-factor authentication key to get started</string>
@@ -29,9 +29,9 @@
     <string name="service_add_secret_key">Secret key</string>
     <string name="service_add_issuer">Service</string>
     <string name="service_add_additional_options">Additional settings</string>
-    <string name="service_add_account">Email or Login (optional)</string>
-    <string name="service_add_algorithm">Generation algorithm (optional)</string>
-    <string name="service_add_digits">Number of digits in code (optional)</string>
+    <string name="service_add_account">Email or Login</string>
+    <string name="service_add_algorithm">Generation algorithm</string>
+    <string name="service_add_digits">Number of digits in code</string>
 
     <string name="service_add_check_key_button">Check key</string>
     <string name="service_add_qr_button">QR</string>
@@ -122,12 +122,14 @@
     <string name="chosen_not_image">Not an image selected</string>
     <string name="failed_to_load_image">Failed to load image\n</string>
     <string name="issuer_required">Service name is required</string>
-    <string name="scan_cooldown">Searching for QR code again...</string>
+    <string name="scan_cooldown">Searching for QR code again…</string>
     <string name="invalid_algorithm">Algorithm must be SHA1, SHA256 or SHA512</string>
     <string name="digits_must_be_between_4_and_10">Digits must be between 4 and 10</string>
+    <string name="period_must_be_between_10_and_60">Period must be between 10 and 60</string>
     <string name="invalid_digits_format">Invalid digits format</string>
     <string name="service_algorithm">Algorithm</string>
     <string name="service_digits">Digits</string>
+    <string name="service_period">Generation time</string>
     <string name="no_gallery_app">No app to select images</string>
 
     <string name="settings_title">Settings</string>
@@ -140,12 +142,18 @@
     <string name="dark_theme">Dark</string>
     <string name="light_theme">Light</string>
     <string name="apply_settings">Apply</string>
-    <string name="version_info">Version 1.0.0</string>
-    <string name="author_info">Author: SuperPlushkin</string>
+    <string name="version_info">Version 2.0.3.6</string>
+    <string name="author_info">Author: MadDevVLDK</string>
     <string name="settings_applied">Settings applied</string>
     <string name="settings_restart_required">Restart required</string>
     <string name="later_button">Later</string>
     <string name="settings_restart_message">Application restart is required to apply changes</string>
     <string name="select_theme_hint">select theme\n</string>
+    <string name="service_add_period">Period</string>
+
+    <string name="edit_service">Edit Service</string>
+    <string name="edit_service_title">Edit Service</string>
+    <string name="service_updated">Service updated</string>
+    <string name="service_update_error">Update error</string>
 
 </resources>

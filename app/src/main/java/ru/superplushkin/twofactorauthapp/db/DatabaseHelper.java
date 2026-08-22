@@ -9,19 +9,15 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import ru.superplushkin.twofactorauthapp.model.Service;
 import ru.superplushkin.twofactorauthapp.model.SimpleService;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "authenticator.db";
-    private static final int DATABASE_VERSION = 5;
+    private static final int DATABASE_VERSION = 7;
 
     public static final String TABLE_SERVICES = "services";
     public static final String COLUMN_ID = "_id";
@@ -31,6 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ISSUER = "issuer";
     public static final String COLUMN_ALGORITHM = "algorithm";
     public static final String COLUMN_DIGITS = "digits";
+    public static final String COLUMN_PERIOD = "period";
     public static final String COLUMN_CREATED_AT = "created_at";
     public static final String COLUMN_USAGE_COUNT = "usage_count";
     public static final String COLUMN_IS_FAVORITE = "is_favorite";
@@ -50,7 +47,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             + COLUMN_ISSUER + " TEXT,"
             + COLUMN_ALGORITHM + " TEXT DEFAULT 'SHA1',"
             + COLUMN_DIGITS + " INTEGER DEFAULT 6,"
-            + COLUMN_CREATED_AT + " TEXT,"
+            + COLUMN_PERIOD + " INTEGER DEFAULT 30,"
+            + COLUMN_CREATED_AT + " INTEGER,"
             + COLUMN_USAGE_COUNT + " INTEGER DEFAULT 0,"
             + COLUMN_IS_FAVORITE + " INTEGER DEFAULT 0,"
             + COLUMN_SORT_ORDER + " INTEGER DEFAULT 0"
@@ -65,7 +63,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public long addService(String serviceName, String secretKey, String account, String issuer, String algorithm, short digits) {
+    public long addService(String serviceName, String secretKey, String account, String issuer, String algorithm, short digits, short period) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_SERVICE_NAME, serviceName);
@@ -74,12 +72,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_ISSUER, issuer);
         values.put(COLUMN_ALGORITHM, algorithm);
         values.put(COLUMN_DIGITS, digits);
-        values.put(COLUMN_CREATED_AT, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
+        values.put(COLUMN_PERIOD, period);
+        values.put(COLUMN_CREATED_AT, System.currentTimeMillis());
 
         int maxSortOrder = getMaxSortOrder();
         values.put(COLUMN_SORT_ORDER, maxSortOrder + 1);
 
         return db.insert(TABLE_SERVICES, null, values);
+    }
+    public boolean updateService(Service service) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
+        values.put(COLUMN_SERVICE_NAME, service.getServiceName());
+        values.put(COLUMN_ACCOUNT, service.getAccount());
+        values.put(COLUMN_ISSUER, service.getIssuer());
+        values.put(COLUMN_ALGORITHM, service.getAlgorithm());
+        values.put(COLUMN_DIGITS, service.getDigits());
+        values.put(COLUMN_PERIOD, service.getPeriod());
+
+        int rows = db.update(TABLE_SERVICES, values, COLUMN_ID + " = ?", new String[] { String.valueOf(service.getId()) });
+        return rows > 0;
     }
     public long restoreService(Service service) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -91,6 +104,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_ISSUER, service.getIssuer());
         values.put(COLUMN_ALGORITHM, service.getAlgorithm());
         values.put(COLUMN_DIGITS, service.getDigits());
+        values.put(COLUMN_PERIOD, service.getPeriod());
         values.put(COLUMN_CREATED_AT, service.getCreatedAt());
         values.put(COLUMN_USAGE_COUNT, service.getUsageCount());
         values.put(COLUMN_IS_FAVORITE, service.isFavorite() ? 1 : 0);
@@ -130,10 +144,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     cursor.getString(cursor.getColumnIndex(COLUMN_ISSUER)),
                     cursor.getString(cursor.getColumnIndex(COLUMN_ALGORITHM)),
                     cursor.getShort(cursor.getColumnIndex(COLUMN_DIGITS)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_CREATED_AT)),
+                    cursor.getShort(cursor.getColumnIndex(COLUMN_PERIOD)),
+                    cursor.getLong(cursor.getColumnIndex(COLUMN_CREATED_AT)),
                     cursor.getInt(cursor.getColumnIndex(COLUMN_USAGE_COUNT)),
                     cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVORITE)) == 1,
-                    cursor.getInt(cursor.getColumnIndex(COLUMN_SORT_ORDER))
+                    cursor.getShort(cursor.getColumnIndex(COLUMN_SORT_ORDER))
                 );
                 services.add(service);
             } while (cursor.moveToNext());
@@ -163,9 +178,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     cursor.getLong(cursor.getColumnIndex(COLUMN_ID)),
                     cursor.getString(cursor.getColumnIndex(COLUMN_SERVICE_NAME)),
                     cursor.getString(cursor.getColumnIndex(COLUMN_ACCOUNT)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_CREATED_AT)),
+                    cursor.getLong(cursor.getColumnIndex(COLUMN_CREATED_AT)),
                     cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVORITE)) == 1,
-                    cursor.getInt(cursor.getColumnIndex(COLUMN_SORT_ORDER))
+                    cursor.getShort(cursor.getColumnIndex(COLUMN_SORT_ORDER))
                 );
                 services.add(service);
             } while (cursor.moveToNext());
@@ -182,44 +197,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = db.query(TABLE_SERVICES, null, selection, selectionArgs, null, null, null);
 
         Service service = null;
-        if (cursor.moveToFirst())
+        if (cursor.moveToFirst()){
             service = extractServiceFromCursor(cursor);
-
-        cursor.close();
-        return service;
-    }
-    public SimpleService getSimpleService(long id) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        String selection = COLUMN_ID + " = ?";
-        String[] selectionArgs = {String.valueOf(id)};
-
-        String[] columns = {
-            COLUMN_ID,
-            COLUMN_SERVICE_NAME,
-            COLUMN_ACCOUNT,
-            COLUMN_CREATED_AT,
-            COLUMN_IS_FAVORITE,
-            COLUMN_SORT_ORDER
-        };
-
-        Cursor cursor = db.query(TABLE_SERVICES, columns, selection, selectionArgs, null, null, null);
-
-        SimpleService simpleService = null;
-        if (cursor.moveToFirst()) {
-            @SuppressLint("Range")
-            SimpleService service = new SimpleService(
-                cursor.getLong(cursor.getColumnIndex(COLUMN_ID)),
-                cursor.getString(cursor.getColumnIndex(COLUMN_SERVICE_NAME)),
-                cursor.getString(cursor.getColumnIndex(COLUMN_ACCOUNT)),
-                cursor.getString(cursor.getColumnIndex(COLUMN_CREATED_AT)),
-                cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVORITE)) == 1,
-                cursor.getInt(cursor.getColumnIndex(COLUMN_SORT_ORDER))
-            );
-            simpleService = service;
         }
 
         cursor.close();
-        return simpleService;
+        return service;
     }
 
     public void updateServiceOrder(long id, int newPosition) {
@@ -246,7 +229,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String whereClause = COLUMN_ID + " = ?";
         String[] whereArgs = {String.valueOf(id)};
 
-        int rowsAffected = db.update(TABLE_SERVICES, values, whereClause, whereArgs);
+        db.update(TABLE_SERVICES, values, whereClause, whereArgs);
     }
     public void toggleFavorite(long id) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -261,7 +244,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String whereClause = COLUMN_ID + " = ?";
         String[] whereArgs = {String.valueOf(id)};
 
-        int rowsAffected = db.update(TABLE_SERVICES, values, whereClause, whereArgs);
+        db.update(TABLE_SERVICES, values, whereClause, whereArgs);
     }
 
     public void deleteService(long id) {
@@ -285,14 +268,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         @SuppressLint("Range")
         short digits = cursor.getShort(cursor.getColumnIndex(COLUMN_DIGITS));
         @SuppressLint("Range")
-        String createdAt = cursor.getString(cursor.getColumnIndex(COLUMN_CREATED_AT));
+        short period = cursor.getShort(cursor.getColumnIndex(COLUMN_PERIOD));
+        @SuppressLint("Range")
+        long createdAt = cursor.getLong(cursor.getColumnIndex(COLUMN_CREATED_AT));
         @SuppressLint("Range")
         int usageCount = cursor.getInt(cursor.getColumnIndex(COLUMN_USAGE_COUNT));
         @SuppressLint("Range")
         boolean isFavorite = cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVORITE)) == 1;
         @SuppressLint("Range")
-        int sortOrder = cursor.getInt(cursor.getColumnIndex(COLUMN_SORT_ORDER));
+        short sortOrder = cursor.getShort(cursor.getColumnIndex(COLUMN_SORT_ORDER));
 
-        return new Service(id, serviceName, secretKey, account, issuer, algorithm, digits, createdAt, usageCount, isFavorite, sortOrder);
+        return new Service(id, serviceName, secretKey, account, issuer, algorithm, digits, period, createdAt, usageCount, isFavorite, sortOrder);
     }
 }
